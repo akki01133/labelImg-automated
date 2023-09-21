@@ -9,6 +9,8 @@ import sys
 import webbrowser as wb
 from functools import partial
 
+from libs.fer_tool import FERTool
+
 try:
     from PyQt5.QtGui import *
     from PyQt5.QtCore import *
@@ -241,6 +243,9 @@ class MainWindow(QMainWindow, WindowMixin):
 
         verify = action(get_str('verifyImg'), self.verify_image,
                         'space', 'verify', get_str('verifyImgDetail'))
+        
+        run_detection = action(get_str('runDetection'), self.run_emotion_detection,
+                        'Ctrl+space', 'runDetection', get_str('runDetectionDetail'), enabled=False)
 
         save = action(get_str('save'), self.save_file,
                       'Ctrl+S', 'save', get_str('saveDetail'), enabled=False)
@@ -383,7 +388,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.draw_squares_option.triggered.connect(self.toggle_draw_square)
 
         # Store actions for further handling.
-        self.actions = Struct(save=save, save_format=save_format, saveAs=save_as, open=open, close=close, resetAll=reset_all, deleteImg=delete_image,
+        self.actions = Struct(save=save, save_format=save_format,runDetection=run_detection, saveAs=save_as, open=open, close=close, resetAll=reset_all, deleteImg=delete_image,
                               lineColor=color1, create=create, delete=delete, edit=edit, copy=copy,
                               createMode=create_mode, editMode=edit_mode, advancedMode=advanced_mode,
                               shapeLineColor=shape_line_color, shapeFillColor=shape_fill_color,
@@ -452,12 +457,12 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.tools = self.toolbar('Tools')
         self.actions.beginner = (
-            open, open_dir, change_save_dir, open_next_image, open_prev_image, verify, save, save_format, None, create, copy, delete, None,
+            open, open_dir, change_save_dir, open_next_image, open_prev_image, verify,run_detection, save, save_format, None, create, copy, delete, None,
             zoom_in, zoom, zoom_out, fit_window, fit_width, None,
             light_brighten, light, light_darken, light_org)
 
         self.actions.advanced = (
-            open, open_dir, change_save_dir, open_next_image, open_prev_image, save, save_format, None,
+            open, open_dir, change_save_dir, open_next_image, open_prev_image,run_detection, save, save_format, None,
             create_mode, edit_mode, None,
             hide_all, show_all)
 
@@ -538,6 +543,10 @@ class MainWindow(QMainWindow, WindowMixin):
         self.label_coordinates = QLabel('')
         self.statusBar().addPermanentWidget(self.label_coordinates)
 
+        # initialize the fer pipeline tool
+        yolo_model_path = "./models/yolov8/yolov8.pt"
+        self.ferModel = FERTool(yolo_model_path) 
+
         # Open Dir if default file
         if self.file_path and os.path.isdir(self.file_path):
             self.open_dir_dialog(dir_path=self.file_path, silent=True)
@@ -550,6 +559,9 @@ class MainWindow(QMainWindow, WindowMixin):
         if event.key() == Qt.Key_Control:
             # Draw rectangle if Ctrl is pressed
             self.canvas.set_drawing_shape_to_square(True)
+
+    def run_emotion_detection(self):
+        print('running detection')
 
     # Support Functions #
     def set_format(self, save_format):
@@ -622,11 +634,13 @@ class MainWindow(QMainWindow, WindowMixin):
     def set_dirty(self):
         self.dirty = True
         self.actions.save.setEnabled(True)
+        self.actions.runDetection.setEnabled(False)
 
     def set_clean(self):
         self.dirty = False
         self.actions.save.setEnabled(False)
         self.actions.create.setEnabled(True)
+        self.actions.runDetection.setEnabled(True)
 
     def toggle_actions(self, value=True):
         """Enable/Disable widgets which depend on an opened image."""
