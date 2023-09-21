@@ -17,6 +17,7 @@ class LabelDialog(QDialog):
         super(LabelDialog, self).__init__(parent)
 
         self.edit = QLineEdit()
+        self.edit.setEnabled(False)
         self.edit.setText(text)
         self.edit.setValidator(label_validator())
         self.edit.editingFinished.connect(self.post_process)
@@ -62,7 +63,7 @@ class LabelDialog(QDialog):
         """
         self.edit.setText(text)
         self.edit.setSelection(0, len(text))
-        self.edit.setFocus(Qt.PopupFocusReason)
+        # self.edit.setFocus(Qt.PopupFocusReason)
         if move:
             cursor_pos = QCursor.pos()
 

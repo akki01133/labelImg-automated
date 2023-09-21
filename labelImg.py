@@ -107,13 +107,16 @@ class MainWindow(QMainWindow, WindowMixin):
         self._beginner = True
         self.screencast = "https://youtu.be/p0nR2YsCY_U"
 
-        # Load predefined classes to the list
-        self.load_predefined_classes(default_prefdef_class_file)
+       # Load predefined classes to the list
+        # self.load_predefined_classes(default_prefdef_class_file)
+        self.label_hist = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
 
-        if self.label_hist:
-            self.default_label = self.label_hist[0]
-        else:
-            print("Not find:/data/predefined_classes.txt (optional)")
+        # if self.label_hist:
+        #     self.default_label = self.label_hist[0]
+        # else:
+        #     print("Not find:/data/predefined_classes.txt (optional)")
+        #--------------------------------------------------------------
+        self.default_label = self.label_hist[0]
 
         # Main widgets and related state.
         self.label_dialog = LabelDialog(parent=self, list_item=self.label_hist)
