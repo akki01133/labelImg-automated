@@ -562,6 +562,39 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def run_emotion_detection(self):
         print('running detection')
+        self.set_dirty()
+        #----------detecting the emotions--------------------
+        img_size = [self.image.height(), self.image.width(),
+                    1 if self.image.isGrayscale() else 3]
+        
+        detected_shapes = self.detect_faces(self.ferModel, self.file_path, img_size, self.difficult)
+        for s in self.canvas.shapes:
+            self.remove_label(s)
+        self.load_labels(detected_shapes)
+        
+
+    def detect_faces(self, model, file_path, img_size , difficult = False):
+        predictions = model.predict(file_path)
+        run_shapes= []
+        
+        for p in predictions:
+            name, x1,y1,w,h,emotion = p.split(',')
+            x1 = float(x1)/img_size[1]; y1 = float(y1)/img_size[0]; w = float(w)/img_size[1]; h = float(h)/img_size[0]
+            x_center = x1+(w/2.0)
+            y_center = y1+(h/2.0)
+            x_min = max(float(x_center) - float(w) / 2, 0)
+            x_max = min(float(x_center) + float(w) / 2, 1)
+            y_min = max(float(y_center) - float(h) / 2, 0)
+            y_max = min(float(y_center) + float(h) / 2, 1)
+
+            x_min = round(img_size[1] * x_min)
+            x_max = round(img_size[1] * x_max)
+            y_min = round(img_size[0] * y_min)
+            y_max = round(img_size[0] * y_max)
+
+            points = [(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max)]
+            run_shapes.append((emotion, points, None, None, difficult))
+        return run_shapes
 
     # Support Functions #
     def set_format(self, save_format):
