@@ -574,25 +574,10 @@ class MainWindow(QMainWindow, WindowMixin):
         
 
     def detect_faces(self, model, file_path, img_size , difficult = False):
-        predictions = model.predict(file_path)
+        predictions = model.predict(file_path,img_size)
         run_shapes= []
-        
         for p in predictions:
-            name, x1,y1,w,h,emotion = p.split(',')
-            x1 = float(x1)/img_size[1]; y1 = float(y1)/img_size[0]; w = float(w)/img_size[1]; h = float(h)/img_size[0]
-            x_center = x1+(w/2.0)
-            y_center = y1+(h/2.0)
-            x_min = max(float(x_center) - float(w) / 2, 0)
-            x_max = min(float(x_center) + float(w) / 2, 1)
-            y_min = max(float(y_center) - float(h) / 2, 0)
-            y_max = min(float(y_center) + float(h) / 2, 1)
-
-            x_min = round(img_size[1] * x_min)
-            x_max = round(img_size[1] * x_max)
-            y_min = round(img_size[0] * y_min)
-            y_max = round(img_size[0] * y_max)
-
-            points = [(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max)]
+            emotion, points = p
             run_shapes.append((emotion, points, None, None, difficult))
         return run_shapes
 
