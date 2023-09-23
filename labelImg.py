@@ -247,6 +247,8 @@ class MainWindow(QMainWindow, WindowMixin):
         run_detection = action(get_str('runDetection'), self.run_emotion_detection,
                         'Ctrl+space', 'runDetection', get_str('runDetectionDetail'), enabled=False)
 
+        run_batch_detection = action(get_str('runDetection'), self.run_batch_annotation,
+                        'Ctrl+Shift+space', 'runDetection', get_str('runDetectionDetail'))
         save = action(get_str('save'), self.save_file,
                       'Ctrl+S', 'save', get_str('saveDetail'), enabled=False)
 
@@ -435,7 +437,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.display_label_option.triggered.connect(self.toggle_paint_labels_option)
 
         add_actions(self.menus.file,
-                    (open, open_dir, change_save_dir, open_annotation, copy_prev_bounding, self.menus.recentFiles, save, save_format, save_as, close, reset_all, delete_image, quit))
+                    (open, open_dir, change_save_dir,run_batch_detection, open_annotation, copy_prev_bounding, self.menus.recentFiles, save, save_format, save_as, close, reset_all, delete_image, quit))
         add_actions(self.menus.help, (help_default, show_info, show_shortcut))
         add_actions(self.menus.view, (
             self.auto_saving,
@@ -560,6 +562,63 @@ class MainWindow(QMainWindow, WindowMixin):
             # Draw rectangle if Ctrl is pressed
             self.canvas.set_drawing_shape_to_square(True)
 
+    def run_batch_annotation(self):
+        if(self.dir_name == None):
+            self.statusBar().showMessage('Please open a directory first')
+            return
+        if(self.default_save_dir == None):
+            self.statusBar().showMessage('Please set a default save directory first')
+            return
+        self.statusBar().showMessage('Running batch annotation')
+        from libs.batch_worker import  ModalDialog
+        modal_dialog = ModalDialog(self,self.m_img_list,self.default_save_dir, self.run_batch_part)
+        modal_dialog.exec_()
+
+    def run_batch_part(self, e):   
+            image_data = read(e, None) 
+
+            if isinstance(image_data, QImage):
+                image = image_data
+            else:
+                image = QImage.fromData(image_data)
+            img_size = [image.height(), image.width(),
+                    1 if image.isGrayscale() else 3]
+            detected_shapes = self.detect_faces(self.ferModel, e, img_size,difficult= False)
+            if(e == self.file_path):
+                first_image_shape = detected_shapes
+                self.load_labels(first_image_shape)
+            s = []
+            for label, points, line_color, fill_color, difficult in detected_shapes:
+                shape = Shape(label=label)
+                for x, y in points:
+                    shape.add_point(QPointF(x, y))
+                shape.difficult = difficult
+                shape.close()
+                s.append(shape)
+
+                if line_color:
+                    shape.line_color = QColor(*line_color)
+                else:
+                    shape.line_color = generate_color_by_text(label)
+
+                if fill_color:
+                    shape.fill_color = QColor(*fill_color)
+                else:
+                    shape.fill_color = generate_color_by_text(label)
+            if self.default_save_dir is not None and len(ustr(self.default_save_dir)):
+                image_file_name = os.path.basename(e)
+                saved_file_name = os.path.splitext(image_file_name)[0]
+                saved_path = os.path.join(ustr(self.default_save_dir), saved_file_name)
+            else:
+                image_file_dir = os.path.dirname(e)
+                image_file_name = os.path.basename(e)
+                saved_file_name = os.path.splitext(image_file_name)[0]
+                saved_path = os.path.join(image_file_dir, saved_file_name)   
+            self.save_labels(None, saved_path, s, e, image_data, self.label_file_format)
+        # from libs.batch_worker import  ModalDialog
+        # modal_dialog = ModalDialog(self,self.m_img_list,self.default_save_dir, self.run_batch_part)
+        # modal_dialog.exec_()  
+
     def run_emotion_detection(self):
         print('running detection')
         self.set_dirty()
@@ -577,8 +636,8 @@ class MainWindow(QMainWindow, WindowMixin):
         predictions = model.predict(file_path,img_size)
         run_shapes= []
         for p in predictions:
-            emotion, points = p
-            run_shapes.append((emotion, points, None, None, difficult))
+            label, points = p
+            run_shapes.append((label, points, None, None, difficult))
         return run_shapes
 
     # Support Functions #
@@ -911,42 +970,36 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.combo_box.update_items(unique_text_list)
 
-    def save_labels(self, annotation_file_path):
-        annotation_file_path = ustr(annotation_file_path)
-        if self.label_file is None:
-            self.label_file = LabelFile()
-            self.label_file.verified = self.canvas.verified
+    def format_shape(self,s):
+        return dict(label=s.label,
+                    line_color=s.line_color.getRgb(),
+                    fill_color=s.fill_color.getRgb(),
+                    points=[(p.x(), p.y()) for p in s.points],
+                    # add chris
+                    difficult=s.difficult)    
 
-        def format_shape(s):
-            return dict(label=s.label,
-                        line_color=s.line_color.getRgb(),
-                        fill_color=s.fill_color.getRgb(),
-                        points=[(p.x(), p.y()) for p in s.points],
-                        # add chris
-                        difficult=s.difficult)
-
-        shapes = [format_shape(shape) for shape in self.canvas.shapes]
+    def save_labels(self,label_file, annotation_file_path, canvas_shapes, file_path, image_data,label_file_format):
+        if label_file is None:
+            label_file = LabelFile()
+        shapes = [self.format_shape(shape) for shape in canvas_shapes]
         # Can add different annotation formats here
         try:
-            if self.label_file_format == LabelFileFormat.PASCAL_VOC:
+            if label_file_format == LabelFileFormat.PASCAL_VOC:
                 if annotation_file_path[-4:].lower() != ".xml":
                     annotation_file_path += XML_EXT
-                self.label_file.save_pascal_voc_format(annotation_file_path, shapes, self.file_path, self.image_data,
-                                                       self.line_color.getRgb(), self.fill_color.getRgb())
-            elif self.label_file_format == LabelFileFormat.YOLO:
+                label_file.save_pascal_voc_format(annotation_file_path, shapes, file_path, image_data)
+            elif label_file_format == LabelFileFormat.YOLO:
                 if annotation_file_path[-4:].lower() != ".txt":
                     annotation_file_path += TXT_EXT
-                self.label_file.save_yolo_format(annotation_file_path, shapes, self.file_path, self.image_data, self.label_hist,
-                                                 self.line_color.getRgb(), self.fill_color.getRgb())
-            elif self.label_file_format == LabelFileFormat.CREATE_ML:
+                label_file.save_yolo_format(annotation_file_path, shapes, file_path, image_data, self.label_hist)
+            elif label_file_format == LabelFileFormat.CREATE_ML:
                 if annotation_file_path[-5:].lower() != ".json":
                     annotation_file_path += JSON_EXT
-                self.label_file.save_create_ml_format(annotation_file_path, shapes, self.file_path, self.image_data,
-                                                      self.label_hist, self.line_color.getRgb(), self.fill_color.getRgb())
+                label_file.save_create_ml_format(annotation_file_path, shapes, file_path, image_data,
+                                                      self.label_hist)
             else:
-                self.label_file.save(annotation_file_path, shapes, self.file_path, self.image_data,
-                                     self.line_color.getRgb(), self.fill_color.getRgb())
-            print('Image:{0} -> Annotation:{1}'.format(self.file_path, annotation_file_path))
+                label_file.save(annotation_file_path, shapes, file_path, image_data)
+            print('Image:{0} -> Annotation:{1}'.format(file_path, annotation_file_path))
             return True
         except LabelFileError as e:
             self.error_message(u'Error saving label data', u'<b>%s</b>' % e)
@@ -1537,7 +1590,13 @@ class MainWindow(QMainWindow, WindowMixin):
         return ''
 
     def _save_file(self, annotation_file_path):
-        if annotation_file_path and self.save_labels(annotation_file_path):
+        if not annotation_file_path:
+            return
+        annotation_file_path = ustr(annotation_file_path)
+        if self.label_file is None:
+            self.label_file = LabelFile()
+            self.label_file.verified = self.canvas.verified
+        if self.save_labels( self.label_file,annotation_file_path,self.canvas.shapes,self.file_path,self.image_data, self.label_file_format):
             self.set_clean()
             self.statusBar().showMessage('Saved to  %s' % annotation_file_path)
             self.statusBar().show()

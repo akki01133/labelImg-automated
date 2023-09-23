@@ -26,7 +26,7 @@ class FERTool:
             line = ''
             # get the emotion with highest probability , format = {'angry': 0.1, 'disgust': 0.0, 'fear': 0.0, 'happy': 0.0, 'sad': 0.0, 'surprise': 0.0, 'neutral': 0.9}
             emotions = r['emotions']
-            emotion = max(emotions, key=emotions.get)
+            label = max(emotions, key=emotions.get)
             # get the box coordinates, format = x,y,w,h
             x1,y1,w,h = r['box']
             x1 = float(x1)/img_size[1]; y1 = float(y1)/img_size[0]; w = float(w)/img_size[1]; h = float(h)/img_size[0]
@@ -43,7 +43,7 @@ class FERTool:
             y_max = round(img_size[0] * y_max)
 
             points = [(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max)]
-            lines.append((emotion, points))
+            lines.append((label, points))
         return lines    
     
     def save_prediction_results(self, image_name, results, output_dir):
