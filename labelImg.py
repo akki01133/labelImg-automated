@@ -110,14 +110,14 @@ class MainWindow(QMainWindow, WindowMixin):
         self.screencast = "https://youtu.be/p0nR2YsCY_U"
 
        # Load predefined classes to the list
-        # self.load_predefined_classes(default_prefdef_class_file)
-        self.label_hist = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
+        self.load_predefined_classes(default_prefdef_class_file)
 
-        # if self.label_hist:
-        #     self.default_label = self.label_hist[0]
-        # else:
-        #     print("Not find:/data/predefined_classes.txt (optional)")
-        #--------------------------------------------------------------
+        if self.label_hist:
+            self.default_label = self.label_hist[0]
+        else:
+            print("Not find:/data/predefined_classes.txt (optional)")
+            self.label_hist = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
+
         self.default_label = self.label_hist[0]
 
         # Main widgets and related state.
@@ -247,8 +247,8 @@ class MainWindow(QMainWindow, WindowMixin):
         run_detection = action(get_str('runDetection'), self.run_emotion_detection,
                         'Ctrl+space', 'runDetection', get_str('runDetectionDetail'), enabled=False)
 
-        run_batch_detection = action(get_str('runDetection'), self.run_batch_annotation,
-                        'Ctrl+Shift+space', 'runDetection', get_str('runDetectionDetail'))
+        run_batch_detection = action(get_str('runBatchDetection'), self.run_batch_annotation,
+                        'Ctrl+Shift+space', 'runDetection', get_str('runBatchDetectionDetail'))
         save = action(get_str('save'), self.save_file,
                       'Ctrl+S', 'save', get_str('saveDetail'), enabled=False)
 
@@ -632,7 +632,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.load_labels(detected_shapes)
         
 
-    def detect_faces(self, model, file_path, img_size , difficult = False):
+    def detect_faces(self, model: FERTool, file_path, img_size , difficult = False):
         predictions = model.predict(file_path,img_size)
         run_shapes= []
         for p in predictions:

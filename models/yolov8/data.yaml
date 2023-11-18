@@ -1,6 +1,6 @@
-train: ./images/train
-val: ./images/val
+train: C:\Users\ajeetkr\Desktop\BTP\labelImg-automated\models\yolov8\datasets\train
+val: C:\Users\ajeetkr\Desktop\BTP\labelImg-automated\models\yolov8\datasets\train
 
 nc: 1
 
-names: ["human_face"]
+names: ["fire"]
