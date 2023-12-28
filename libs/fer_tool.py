@@ -23,14 +23,16 @@ class FERTool:
             return lines
         else:
             lines = []
-            for i, xywh in enumerate(res.boxes.xywhn):
+            for i, xywh in enumerate(res.boxes.xywh):
                 label = int(res.boxes.cls[i].item())
                 if (label != 0):
                     continue
-                x, y, w, h = [float(tensor.item()) for tensor in xywh]
-                print(x, y, w, h)
-                x_center = x+(w/2.0)
-                y_center = y+(h/2.0)
+                x, y, w, h = [int(tensor.item()) for tensor in xywh]
+                # show the image and the bounding box predictions using opencv
+                x_center = float(x)/img_size[1]
+                y_center = float(y)/img_size[0]
+                w = float(w)/img_size[1]
+                h = float(h)/img_size[0]
                 x_min = max(float(x_center) - float(w) / 2, 0)
                 x_max = min(float(x_center) + float(w) / 2, 1)
                 y_min = max(float(y_center) - float(h) / 2, 0)
@@ -44,16 +46,12 @@ class FERTool:
                 points = [(x_min, y_min), (x_max, y_min),
                           (x_max, y_max), (x_min, y_max)]
                 lines.append((res.names[label], points))
+            cv2.waitKey(0)
             return lines
 
     def classify_emotions(self, image_path, faces_xyxy, img_size):
-        face_rectangles = []
-        for xyxy in faces_xyxy:
-            x1, y1, x2, y2 = [int(tensor.item()) for tensor in xyxy]
-            face_rectangles.append((x1, y1, x2-x1, y2-y1))
         img = cv2.imread(image_path)
-        results = self.fer_model.detect_emotions(
-            img, face_rectangles=face_rectangles)
+        results = self.fer_model.detect_emotions(img)
         lines = []
         for i, r in enumerate(results):
             # single line format = image_name, x,y,w,h,emotion

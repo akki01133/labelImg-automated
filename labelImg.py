@@ -568,7 +568,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.statusBar().addPermanentWidget(self.label_coordinates)
 
         # initialize the fer pipeline tool
-        yolo_model_path = "./models/yolov8/yolov8.pt"
+        yolo_model_path = "./models/yolov8/face.pt"
         self.ferModel = FERTool(yolo_model_path)
 
         # Open Dir if default file
@@ -646,7 +646,7 @@ class MainWindow(QMainWindow, WindowMixin):
         # modal_dialog.exec_()
 
     def run_detection(self):
-        print('running detection')
+        # print('running detection')
         self.set_dirty()
         # ----------detecting--------------------
         img_size = [self.image.height(), self.image.width(),
@@ -1033,8 +1033,8 @@ class MainWindow(QMainWindow, WindowMixin):
             else:
                 label_file.save(annotation_file_path, shapes,
                                 file_path, image_data)
-            print('Image:{0} -> Annotation:{1}'.format(file_path,
-                  annotation_file_path))
+            # print('Image:{0} -> Annotation:{1}'.format(file_path,
+            #       annotation_file_path))
             return True
         except LabelFileError as e:
             self.error_message(u'Error saving label data', u'<b>%s</b>' % e)
@@ -1780,7 +1780,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.set_format(FORMAT_YOLO)
         t_yolo_parse_reader = YoloReader(txt_path, self.image)
         shapes = t_yolo_parse_reader.get_shapes()
-        print(shapes)
+        print("shapes: ", shapes)
         self.load_labels(shapes)
         self.canvas.verified = t_yolo_parse_reader.verified
 
