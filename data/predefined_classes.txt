@@ -1,9 +1,4 @@
 fire
 person
-angry
-disgust
-fear
-happy
-sad
-surprise
-neutral
+human_face
+heavy-weapon

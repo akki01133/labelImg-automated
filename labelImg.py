@@ -568,8 +568,13 @@ class MainWindow(QMainWindow, WindowMixin):
         self.statusBar().addPermanentWidget(self.label_coordinates)
 
         # initialize the fer pipeline tool
-        yolo_model_path = "./models/yolov8/face.pt"
-        self.ferModel = FERTool(yolo_model_path)
+        yolo_modes_dir = "./models/yolov8/"
+        self.ferModels = []
+        # open the directory and load all the models
+        for filename in os.listdir(yolo_modes_dir):
+            if filename.endswith(".pt"):
+                model = FERTool(os.path.join(yolo_modes_dir, filename))
+                self.ferModels.append(model)
 
         # Open Dir if default file
         if self.file_path and os.path.isdir(self.file_path):
@@ -607,7 +612,7 @@ class MainWindow(QMainWindow, WindowMixin):
         img_size = [image.height(), image.width(),
                     1 if image.isGrayscale() else 3]
         detected_shapes = self.detect_objects(
-            self.ferModel, e, img_size, difficult=False)
+            self.ferModels, e, img_size, difficult=False)
         if (e == self.file_path):
             first_image_shape = detected_shapes
             self.load_labels(first_image_shape)
@@ -653,13 +658,16 @@ class MainWindow(QMainWindow, WindowMixin):
                     1 if self.image.isGrayscale() else 3]
 
         detected_shapes = self.detect_objects(
-            self.ferModel, self.file_path, img_size, self.difficult)
+            self.ferModels, self.file_path, img_size, self.difficult)
         for s in self.canvas.shapes:
             self.remove_label(s)
         self.load_labels(detected_shapes)
 
-    def detect_objects(self, model, file_path, img_size, difficult=False):
-        predictions = model.predict(file_path, img_size)
+    def detect_objects(self, models, file_path, img_size, difficult=False):
+        predictions = [] 
+        for m in models:
+            predictions += m.predict(file_path, img_size)
+        print(predictions)    
         run_shapes = []
         for p in predictions:
             label, points = p
@@ -1780,7 +1788,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.set_format(FORMAT_YOLO)
         t_yolo_parse_reader = YoloReader(txt_path, self.image)
         shapes = t_yolo_parse_reader.get_shapes()
-        print("shapes: ", shapes)
         self.load_labels(shapes)
         self.canvas.verified = t_yolo_parse_reader.verified
 

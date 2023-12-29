@@ -12,6 +12,7 @@ class FERTool:
 
     def predict(self, image_path, img_size, classification_type=None):
         # to explicitly save the yolo results to a file, use save=True
+        print('Predicting. Model: ', self.yolo_model_path.split('/')[-1])
         results = self.yolo_model.predict(image_path)
         res = results[0]
         # variable to store the face rectangles to pass to fer model
@@ -25,8 +26,8 @@ class FERTool:
             lines = []
             for i, xywh in enumerate(res.boxes.xywh):
                 label = int(res.boxes.cls[i].item())
-                if (label != 0):
-                    continue
+                # if (label != 0):
+                #     continue
                 x, y, w, h = [int(tensor.item()) for tensor in xywh]
                 # show the image and the bounding box predictions using opencv
                 x_center = float(x)/img_size[1]
